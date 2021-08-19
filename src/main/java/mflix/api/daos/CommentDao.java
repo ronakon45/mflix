@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
@@ -81,7 +82,16 @@ public class CommentDao extends AbstractMFlixDao {
         // comment.
         // TODO> Ticket - Handling Errors: Implement a try catch block to
         // handle a potential write exception when given a wrong commentId.
-        return null;
+        if(comment.getId() == null)
+            throw  new IncorrectDaoOperation(" commentId can't be null ", new Throwable());
+
+        try {
+            commentCollection.insertOne(comment);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return comment;
     }
 
     /**
@@ -99,11 +109,31 @@ public class CommentDao extends AbstractMFlixDao {
      */
     public boolean updateComment(String commentId, String text, String email) {
 
-        // TODO> Ticket - Update User reviews: implement the functionality that enables updating an
-        // user own comments
+        Comment comment = null;
+        Bson queryFilter = Filters.and(
+                Filters.eq("_id", new ObjectId(commentId)),
+                Filters.eq("email", email)
+        );
+        Boolean status = false;
+
         // TODO> Ticket - Handling Errors: Implement a try catch block to
         // handle a potential write exception when given a wrong commentId.
-        return false;
+        try {
+            comment = commentCollection.find(queryFilter).first();
+            System.out.println(comment.toString());
+        } catch (Exception e) {
+            System.out.println(e);
+            throw new IncorrectDaoOperation("Wrong commentId", new Throwable());
+        }
+
+        // TODO> Ticket - Update User reviews: implement the functionality that enables updating an
+        // user own comments
+        if (comment != null) {
+            UpdateResult updateResult = commentCollection.updateOne(queryFilter, set("text", text));
+            status =  updateResult.wasAcknowledged();
+        }
+
+        return status;
     }
 
     /**
