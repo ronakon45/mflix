@@ -27,9 +27,13 @@ import org.springframework.stereotype.Component;
 
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+import static com.mongodb.client.model.Accumulators.sum;
+import static com.mongodb.client.model.Aggregates.*;
+import static com.mongodb.client.model.Indexes.descending;
 import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
@@ -179,6 +183,19 @@ public class CommentDao extends AbstractMFlixDao {
         // // guarantee for the returned documents. Once a commenter is in the
         // // top 20 of users, they become a Critic, so mostActive is composed of
         // // Critic objects.
+        List<Bson> pipeline = new ArrayList<>();
+
+        pipeline.addAll(Arrays.asList(group("$email", sum("count", 1L)),
+                sort(descending("count")),
+                limit(20)));
+
+        MongoCollection<Critic> criticCollection = db.getCollection(COMMENT_COLLECTION, Critic.class)
+                .withCodecRegistry(pojoCodecRegistry).withReadConcern(ReadConcern.MAJORITY);
+
+        for (Critic critic : criticCollection.aggregate(pipeline)) {
+            mostActive.add(critic);
+        }
+
         return mostActive;
     }
 }
