@@ -24,6 +24,8 @@ import org.springframework.context.annotation.Configuration;
 import java.text.MessageFormat;
 import java.util.Map;
 
+import static com.mongodb.client.model.Filters.eq;
+import static com.mongodb.client.model.Updates.set;
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 
@@ -184,6 +186,28 @@ public class UserDao extends AbstractMFlixDao {
         // be updated.
         //TODO > Ticket: Handling Errors - make this method more robust by
         // handling potential exceptions when updating an entry.
-        return false;
+        Boolean status = false;
+
+        if(userPreferences == null){
+            throw new IncorrectDaoOperation("Perferences can't be null");
+        }
+
+        try {
+            User user = getUser(email);
+            if(user != null){
+                usersCollection.updateOne(eq("email", email), set("preferences", userPreferences));
+            }
+            status = true;
+        } catch (Exception e) {
+            // throw new IncorrectDaoOperation("User already exists.");
+            e.printStackTrace();
+        }
+
+        Document queryFilter = new Document("email", email);
+        User user = usersCollection.find(queryFilter).first();
+        System.out.println(user.getPreferences().toString());
+
+        return status;
     }
+
 }
