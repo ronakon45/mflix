@@ -3,6 +3,7 @@ package mflix.api.daos;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoWriteException;
 import com.mongodb.ReadConcern;
+import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.Aggregates;
@@ -147,9 +148,20 @@ public class CommentDao extends AbstractMFlixDao {
         // TODO> Ticket Delete Comments - Implement the method that enables the deletion of a user
         // comment
         // TIP: make sure to match only users that own the given commentId
+        if (commentId.length() == 0) throw new IllegalArgumentException("commentId and email are both required.");
+        if (email.length() == 0) return false;
+
+        Document query = new Document("_id", new ObjectId(commentId));
+
+        Comment comment = commentCollection.find(query).first();
+
+        if (comment != null && comment.getEmail().equals(email)) {
+            commentCollection.findOneAndDelete(query);
+            return true;
+        }
+        return false;
         // TODO> Ticket Handling Errors - Implement a try catch block to
         // handle a potential write exception when given a wrong commentId.
-        return false;
     }
 
     /**
