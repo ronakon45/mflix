@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -70,8 +71,23 @@ public class MovieDao extends AbstractMFlixDao {
         pipeline.add(match);
         // TODO> Ticket: Get Comments - implement the lookup stage that allows the comments to
         // retrieved with Movies.
-        Document movie = moviesCollection.aggregate(pipeline).first();
+        pipeline.addAll(
+                Arrays.asList(
+                        new Document("$lookup",
+                                new Document("from", "comments")
+                                        .append("let",
+                                                new Document("id", "$_id"))
+                                        .append("pipeline", Arrays.asList(
+                                                new Document("$match",
+                                                        new Document("$expr",
+                                                                new Document("$eq", Arrays.asList("$movie_id", "$$id")))),
+                                                new Document("$sort",
+                                                        new Document("date", -1L))))
+                                        .append("as", "comments"))));
 
+        Document movie = moviesCollection.aggregate(pipeline).first();
+        System.out.println(pipeline.toString());
+        System.out.println("OK");
         return movie;
     }
 
@@ -173,8 +189,10 @@ public class MovieDao extends AbstractMFlixDao {
      * @return List of documents sorted by sortKey that match the cast selector.
      */
     public List<Document> getMoviesByCast(String sortKey, int limit, int skip, String... cast) {
-        Bson castFilter = Filters.in("cast", cast);;
-        Bson sort = Sorts.descending(sortKey);;
+        Bson castFilter = Filters.in("cast", cast);
+        ;
+        Bson sort = Sorts.descending(sortKey);
+        ;
         //TODO> Ticket: Subfield Text Search - implement the expected cast
         // filter and sort
         List<Document> movies = new ArrayList<>();
